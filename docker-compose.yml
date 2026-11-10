@@ -28,7 +28,7 @@ services:
       - CONSUMER_WORKER_MAX_ATTEMPTS=${CONSUMER_WORKER_MAX_ATTEMPTS:-3}
       - CONSUMER_PUBLISHER_POLL_INTERVAL=${CONSUMER_PUBLISHER_POLL_INTERVAL:-2.0}
       - CONSUMER_PUBLISHER_BATCH_SIZE=${CONSUMER_PUBLISHER_BATCH_SIZE:-50}
-    depends_on: [postgres, rabbitmq]
+    depends_on: [postgres, rabbitmq, payments]
 
   postgres:
     image: postgres:16-alpine
