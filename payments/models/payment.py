@@ -1,5 +1,3 @@
-"""Payment ORM model."""
-
 import enum
 import uuid
 from datetime import datetime
@@ -13,24 +11,18 @@ from payments.models.base import Base
 
 
 class PaymentStatus(str, enum.Enum):
-    """Payment lifecycle status."""
-
     PENDING = "pending"
     SUCCEEDED = "succeeded"
     FAILED = "failed"
 
 
 class Currency(str, enum.Enum):
-    """Supported currencies."""
-
     RUB = "RUB"
     USD = "USD"
     EUR = "EUR"
 
 
 class Payment(Base):
-    """Payment entity."""
-
     __tablename__ = "payments"
 
     id: Mapped[uuid.UUID] = mapped_column(
