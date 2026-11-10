@@ -1,5 +1,5 @@
 services:
-  payments:
+  api:
     build: ./api
     ports:
       - "${API_PORT}:80"
@@ -11,7 +11,11 @@ services:
       - POSTGRES_PORT=${POSTGRES_PORT}
       - RABBITMQ_URL=amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@rabbitmq:5672/
       - API_KEY=${API_KEY}
-    depends_on: [postgres, rabbitmq]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
 
   consumer:
     build: ./consumer
@@ -28,7 +32,13 @@ services:
       - CONSUMER_WORKER_MAX_ATTEMPTS=${CONSUMER_WORKER_MAX_ATTEMPTS:-3}
       - CONSUMER_PUBLISHER_POLL_INTERVAL=${CONSUMER_PUBLISHER_POLL_INTERVAL:-2.0}
       - CONSUMER_PUBLISHER_BATCH_SIZE=${CONSUMER_PUBLISHER_BATCH_SIZE:-50}
-    depends_on: [postgres, rabbitmq, payments]
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      api:
+        condition: service_started
 
   postgres:
     image: postgres:16-alpine
@@ -40,6 +50,11 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   rabbitmq:
     image: rabbitmq:3-management-alpine
@@ -50,6 +65,12 @@ services:
       - "${RABBITMQ_MANAGEMENT_PORT}:15672"
     volumes:
       - rmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
 
 volumes:
   pg_data:

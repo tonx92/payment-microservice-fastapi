@@ -42,7 +42,14 @@ async def publish_outbox_events(channel: aio_pika.abc.AbstractChannel) -> None:
 
 
 async def start_publisher(shutdown_event: asyncio.Event) -> None:
-    connection = await aio_pika.connect_robust(RABBITMQ_URL)
+    connection = None
+    while connection is None:
+        try:
+            connection = await aio_pika.connect(RABBITMQ_URL)
+        except Exception:
+            logger.warning("rabbitmq not ready, retrying in 5s")
+            await asyncio.sleep(5)
+    logger.info("rabbitmq connected")
     channel = await connection.channel()
     await channel.declare_exchange("payments", aio_pika.ExchangeType.DIRECT)
 

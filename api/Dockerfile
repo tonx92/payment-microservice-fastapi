@@ -9,4 +9,4 @@ COPY . ./api/
 
 EXPOSE 80
 
-CMD ["sh", "-c", "alembic -c api/migrations.ini upgrade head && uvicorn api.main:app --host 0.0.0.0 --port 80"]
+CMD ["sh", "-c", "cd /app/api && alembic -c migrations.ini upgrade head && cd /app && uvicorn api.main:app --host 0.0.0.0 --port 80"]

@@ -27,15 +27,16 @@ async def setup_queues(connection: aio_pika.abc.AbstractConnection) -> None:
     await channel.declare_exchange(EXCHANGE_NAME, aio_pika.ExchangeType.DIRECT)
     await channel.declare_exchange(DLX_NAME, aio_pika.ExchangeType.DIRECT)
     await channel.declare_queue(DLQ_NAME, durable=True)
-    await channel.declare_queue(
+    queue = await channel.declare_queue(
         QUEUE_NAME, durable=True,
         arguments={
             "x-dead-letter-exchange": DLX_NAME,
             "x-dead-letter-routing-key": DLQ_NAME,
         },
     )
-    await channel.queue_bind(QUEUE_NAME, EXCHANGE_NAME, QUEUE_NAME)
-    await channel.queue_bind(DLQ_NAME, DLX_NAME, DLQ_NAME)
+    dlq = await channel.get_queue(DLQ_NAME)
+    await queue.bind(EXCHANGE_NAME, QUEUE_NAME)
+    await dlq.bind(DLX_NAME, DLQ_NAME)
 
 
 async def process_payment(
@@ -88,22 +89,31 @@ async def process_payment(
 
 
 async def start_worker(shutdown_event: asyncio.Event) -> None:
-    connection = await aio_pika.connect_robust(RABBITMQ_URL)
+    connection = None
+    while connection is None:
+        try:
+            connection = await aio_pika.connect(RABBITMQ_URL)
+        except Exception:
+            logger.warning("rabbitmq not ready, retrying in 5s")
+            await asyncio.sleep(5)
+    logger.info("rabbitmq connected")
     await setup_queues(connection)
     channel = await connection.channel()
     await channel.set_qos(prefetch_count=10)
     queue = await channel.get_queue(QUEUE_NAME)
 
     try:
-        async with queue.iter(no_ack=False) as exc:
-            async for message in exc:
-                if shutdown_event.is_set():
-                    break
-                try:
-                    await process_payment(message, channel)
-                except Exception:
-                    logger.exception("unhandled error processing message")
-                    await message.nack(requeue=False)
+        while not shutdown_event.is_set():
+            try:
+                message = await queue.get(no_ack=False)
+            except aio_pika.exceptions.QueueEmpty:
+                await asyncio.sleep(1)
+                continue
+            try:
+                await process_payment(message, channel)
+            except Exception:
+                logger.exception("unhandled error processing message")
+                await message.nack(requeue=False)
     finally:
         await connection.close()
         logger.info("worker stopped")
