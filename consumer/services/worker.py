@@ -44,7 +44,7 @@ async def _has_notified_event(session, payment_id: uuid.UUID) -> bool:
     result = await session.execute(
         select(Outbox.id).where(
             Outbox.event_type == "payment.notified",
-            Outbox.payload["payment_id"].astext == str(payment_id),
+            Outbox.payment_id == payment_id,
         ).limit(1)
     )
     return result.scalar_one_or_none() is not None
@@ -68,8 +68,8 @@ async def _send_webhook_and_notify(
     delivered = await send_webhook(payment.webhook_url, payload)
     if delivered:
         notified_event = Outbox(
+            payment_id=payment.id,
             event_type="payment.notified",
-            payload={"payment_id": str(payment.id)},
         )
         session.add(notified_event)
         await session.commit()
@@ -111,8 +111,8 @@ async def process_payment(
         payment.processed_at = datetime.now(timezone.utc)
 
         outbox_event = Outbox(
+            payment_id=payment.id,
             event_type=event_type,
-            payload={"payment_id": str(payment.id), "status": payment.status.value},
         )
         session.add(outbox_event)
         await session.commit()

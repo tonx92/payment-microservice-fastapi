@@ -32,8 +32,8 @@ class PaymentService:
         await self.db.flush()
 
         event = Outbox(
+            payment_id=payment.id,
             event_type="payment.created",
-            payload={"payment_id": str(payment.id)},
         )
         self.db.add(event)
         return payment, True

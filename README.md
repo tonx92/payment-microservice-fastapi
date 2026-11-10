@@ -22,19 +22,19 @@ curl http://localhost:80/api/v1/payments/c86a3621-637c-45e5-a418-204ad0b49632 -H
 ```
 3) для получения списка таблиц в бд
 ```
-docker exec -it $(docker compose ps -q postgres) psql -U postgres -d payments -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public';"
+docker compose exec postgres psql -U postgres -d payments -P pager=off -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public';"
 ```
 4) для получения содержимого таблицы outbox последние 50
 ```
-docker exec -it $(docker compose ps -q postgres) psql -U postgres -d payments -c "SELECT * FROM outbox ORDER BY id DESC LIMIT 50;"
+docker compose exec postgres psql -U postgres -d payments -P pager=off -c "SELECT * FROM outbox ORDER BY created_at DESC LIMIT 50;"
 ```
 5) для получения содержимого таблицы payments последние 50
 ```
-docker exec -it $(docker compose ps -q postgres) psql -U postgres -d payments -c "SELECT * FROM payments ORDER BY id DESC LIMIT 50;"
+docker compose exec postgres psql -U postgres -d payments -P pager=off -c "SELECT * FROM payments ORDER BY created_at DESC LIMIT 50;"
 ```
 6) для получения содержимого таблицы миграций последние 50
 ```
-docker exec -it $(docker compose ps -q postgres) psql -U postgres -d payments -c "SELECT * FROM alembic_version;"
+docker compose exec postgres psql -U postgres -d payments -P pager=off -c "SELECT * FROM alembic_version;"
 ```
 ## Стек
 - FastAPI + Pydantic v2

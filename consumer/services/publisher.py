@@ -2,7 +2,6 @@ import asyncio
 import json
 import logging
 import os
-from datetime import datetime, timezone
 
 import aio_pika
 from sqlalchemy import select
@@ -20,21 +19,25 @@ CONSUMER_PUBLISHER_BATCH_SIZE = int(os.getenv("CONSUMER_PUBLISHER_BATCH_SIZE", "
 async def publish_outbox_events(exchange: aio_pika.abc.AbstractExchange) -> None:
     async with async_session_factory() as session:
         result = await session.execute(
-            select(Outbox).where(Outbox.published_at.is_(None)).limit(CONSUMER_PUBLISHER_BATCH_SIZE)
+            select(Outbox).limit(CONSUMER_PUBLISHER_BATCH_SIZE)
         )
         events = result.scalars().all()
         if not events:
             return
 
         for event in events:
+            body = {
+                "payment_id": str(event.payment_id),
+                "event_type": event.event_type,
+            }
             await exchange.publish(
                 aio_pika.Message(
-                    body=json.dumps(event.payload).encode(),
+                    body=json.dumps(body).encode(),
                     delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
                 ),
                 routing_key="payments",
             )
-            event.published_at = datetime.now(timezone.utc)
+            await session.delete(event)
 
         await session.commit()
         logger.info("published %d outbox events", len(events))
