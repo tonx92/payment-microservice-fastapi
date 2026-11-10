@@ -3,6 +3,7 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from api.models.outbox import Outbox
 from api.models.payment import Payment
 from api.schemas.payment import PaymentCreate
 
@@ -14,7 +15,6 @@ class PaymentService:
     async def create_payment(
         self, data: PaymentCreate, idempotency_key: str
     ) -> tuple[Payment, bool]:
-        
         existing = await self._get_by_idempotency_key(idempotency_key)
         if existing is not None:
             return existing, False
@@ -30,6 +30,12 @@ class PaymentService:
         )
         self.db.add(payment)
         await self.db.flush()
+
+        event = Outbox(
+            event_type="payment.created",
+            payload={"payment_id": str(payment.id)},
+        )
+        self.db.add(event)
         return payment, True
 
     async def get_payment(self, payment_id: uuid.UUID) -> Payment | None:
