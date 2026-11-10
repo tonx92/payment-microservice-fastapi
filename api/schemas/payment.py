@@ -4,7 +4,7 @@ from decimal import Decimal
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from payments.models.payment import Currency, PaymentStatus
+from api.models.payment import Currency, PaymentStatus
 
 
 class PaymentCreate(BaseModel):

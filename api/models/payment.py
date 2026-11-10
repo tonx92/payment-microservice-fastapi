@@ -7,7 +7,7 @@ from sqlalchemy import DateTime, Enum, ForeignKey, Numeric, String, func
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
-from payments.models.base import Base
+from api.models.base import Base
 
 
 class PaymentStatus(str, enum.Enum):

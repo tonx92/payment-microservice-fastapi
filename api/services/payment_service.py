@@ -3,8 +3,8 @@ import uuid
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from payments.models.payment import Payment
-from payments.schemas.payment import PaymentCreate
+from api.models.payment import Payment
+from api.schemas.payment import PaymentCreate
 
 
 class PaymentService:
