@@ -77,6 +77,7 @@ async def process_payment(
                 await message.nack(requeue=False)
             else:
                 await session.rollback()
+                await asyncio.sleep(3 ** (attempts + 1))
                 new_body = json.dumps({**body, "attempts": attempts + 1})
                 await channel.basic_publish(
                     aio_pika.Message(body=new_body.encode()),
