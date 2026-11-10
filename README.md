@@ -14,11 +14,11 @@ docker compose -f 'docker-compose.yml' down
 
 1) создание платежа POST /api/v1/payments
 ```
-curl -X POST http://localhost:80/api/v1/payments -H "X-API-Key: change-me-to-a-secure-key" -H "Idempotency-Key: 550e8400-e29b-41d4-a716-446655440002" -H "Content-Type: application/json" -d "{\"amount\": 100.50, \"currency\": \"RUB\", \"description\": \"Test payment\", \"webhook_url\": \"http://localhost:8025/webhook\", \"metadata\": {\"order_id\": \"12345\", \"source\": \"test\"}}"
+curl -X POST http://localhost:80/api/v1/payments -H "X-API-Key: change-me-to-a-secure-key" -H "Idempotency-Key: 550e8400-e29b-41d4-a716-446655440003" -H "Content-Type: application/json" -d "{\"amount\": 100.50, \"currency\": \"RUB\", \"description\": \"Test payment\", \"webhook_url\": \"http://localhost:8025/webhook\", \"metadata\": {\"order_id\": \"12345\", \"source\": \"test\"}}"
 ```
 2) получение платежа GET /api/v1/payments/{payment_id}
 ```
-curl http://localhost:80/api/v1/payments/08386b24-aa76-47a9-ac28-dd4f4efab8cd -H "X-API-Key: change-me-to-a-secure-key"
+curl http://localhost:80/api/v1/payments/c86a3621-637c-45e5-a418-204ad0b49632 -H "X-API-Key: change-me-to-a-secure-key"
 ```
 3) для получения списка таблиц в бд
 ```
