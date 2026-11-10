@@ -15,7 +15,7 @@ from consumer.services.webhook import send_webhook
 logger = logging.getLogger(__name__)
 
 RABBITMQ_URL = os.getenv("RABBITMQ_URL")
-WORKER_MAX_ATTEMPTS = int(os.getenv("WORKER_MAX_ATTEMPTS", "3"))
+CONSUMER_WORKER_MAX_ATTEMPTS = int(os.getenv("CONSUMER_WORKER_MAX_ATTEMPTS", "3"))
 QUEUE_NAME = "payments"
 EXCHANGE_NAME = "payments"
 DLX_NAME = "payments_dlx"
@@ -70,7 +70,7 @@ async def process_payment(
                 await send_webhook(payment.webhook_url, payload)
             await message.ack()
         else:
-            if attempts >= WORKER_MAX_ATTEMPTS:
+            if attempts >= CONSUMER_WORKER_MAX_ATTEMPTS:
                 payment.status = PaymentStatus.FAILED
                 payment.processed_at = datetime.now(timezone.utc)
                 await session.commit()

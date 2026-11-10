@@ -13,14 +13,14 @@ from consumer.models.outbox import Outbox
 logger = logging.getLogger(__name__)
 
 RABBITMQ_URL = os.getenv("RABBITMQ_URL")
-PUBLISHER_POLL_INTERVAL = float(os.getenv("PUBLISHER_POLL_INTERVAL", "2.0"))
-PUBLISHER_BATCH_SIZE = int(os.getenv("PUBLISHER_BATCH_SIZE", "50"))
+CONSUMER_PUBLISHER_POLL_INTERVAL = float(os.getenv("CONSUMER_PUBLISHER_POLL_INTERVAL", "2.0"))
+CONSUMER_PUBLISHER_BATCH_SIZE = int(os.getenv("CONSUMER_PUBLISHER_BATCH_SIZE", "50"))
 
 
 async def publish_outbox_events(channel: aio_pika.abc.AbstractChannel) -> None:
     async with async_session_factory() as session:
         result = await session.execute(
-            select(Outbox).where(Outbox.published_at.is_(None)).limit(PUBLISHER_BATCH_SIZE)
+            select(Outbox).where(Outbox.published_at.is_(None)).limit(CONSUMER_PUBLISHER_BATCH_SIZE)
         )
         events = result.scalars().all()
         if not events:
@@ -52,7 +52,7 @@ async def start_publisher(shutdown_event: asyncio.Event) -> None:
                 await publish_outbox_events(channel)
             except Exception:
                 logger.exception("outbox publish error")
-            await asyncio.sleep(PUBLISHER_POLL_INTERVAL)
+            await asyncio.sleep(CONSUMER_PUBLISHER_POLL_INTERVAL)
     finally:
         await connection.close()
         logger.info("publisher stopped")
