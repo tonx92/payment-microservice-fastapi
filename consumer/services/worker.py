@@ -53,41 +53,30 @@ async def process_payment(
             await message.nack(requeue=False)
             return
 
-        await asyncio.sleep(random.uniform(2.0, 5.0))
-        success = random.random() < 0.9
+        if payment.webhook_url:
+            payload = {
+                "payment_id": str(payment.id),
+                "status": payment.status.value,
+                "amount": str(payment.amount),
+                "currency": payment.currency.value,
+            }
+            await asyncio.sleep(random.uniform(2.0, 5.0))
 
-        if success:
-            payment.status = PaymentStatus.SUCCEEDED
-            payment.processed_at = datetime.now(timezone.utc)
-            await session.commit()
-
-            if payment.webhook_url:
-                payload = {
-                    "payment_id": str(payment.id),
-                    "status": payment.status.value,
-                    "amount": str(payment.amount),
-                    "currency": payment.currency.value,
-                }
-                delivered = await send_webhook(payment.webhook_url, payload)
-                if not delivered:
+            delivered = await send_webhook(payment.webhook_url, payload)
+            if not delivered:
+                if attempts >= CONSUMER_WORKER_MAX_ATTEMPTS:
                     await message.nack(requeue=False)
                     return
-            await message.ack()
-        else:
-            if attempts >= CONSUMER_WORKER_MAX_ATTEMPTS:
-                payment.status = PaymentStatus.FAILED
-                payment.processed_at = datetime.now(timezone.utc)
-                await session.commit()
-                await message.nack(requeue=False)
-            else:
-                await session.rollback()
-                await asyncio.sleep(3 ** (attempts + 1))
-                new_body = json.dumps({**body, "attempts": attempts + 1})
                 await exchange.publish(
-                    aio_pika.Message(body=new_body.encode()),
+                    aio_pika.Message(body=json.dumps({**body, "attempts": attempts + 1}).encode()),
                     routing_key=QUEUE_NAME,
                 )
                 await message.ack()
+                return
+            payment.status = PaymentStatus.SUCCEEDED
+            payment.processed_at = datetime.now(timezone.utc)
+            await session.commit()
+        await message.ack()
 
 
 async def start_worker(shutdown_event: asyncio.Event) -> None:

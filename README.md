@@ -10,32 +10,31 @@ docker compose -f 'docker-compose.yml' up -d
 ```
 docker compose -f 'docker-compose.yml' down 
 ```
-## Команды тестирования
-нужны команды:
-1) для получения списка таблиц в бд
-```
-docker exec -it $(docker compose ps -q postgres) psql -U postgres -d payments -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public';"
+## Команды для тестирования
 
-```
-2) для получения содержимого таблицы outbox последние 50
-```
-docker exec -it $(docker compose ps -q postgres) psql -U postgres -d payments -c "SELECT * FROM outbox ORDER BY id DESC LIMIT 50;"
-```
-3) для получения содержимого таблицы payments последние 50
-```
-docker exec -it $(docker compose ps -q postgres) psql -U postgres -d payments -c "SELECT * FROM payments ORDER BY id DESC LIMIT 50;"
-```
-4) для получения содержимого таблицы миграций последние 50
-```
-docker exec -it $(docker compose ps -q postgres) psql -U postgres -d payments -c "SELECT * FROM alembic_version;"
-```
-5) создание платежа POST /api/v1/payments
+1) создание платежа POST /api/v1/payments
 ```
 curl -X POST http://localhost:80/api/v1/payments -H "X-API-Key: change-me-to-a-secure-key" -H "Idempotency-Key: 550e8400-e29b-41d4-a716-446655440002" -H "Content-Type: application/json" -d "{\"amount\": 100.50, \"currency\": \"RUB\", \"description\": \"Test payment\", \"webhook_url\": \"http://localhost:8025/webhook\", \"metadata\": {\"order_id\": \"12345\", \"source\": \"test\"}}"
 ```
-6) получение платежа GET /api/v1/payments/{payment_id}
+2) получение платежа GET /api/v1/payments/{payment_id}
 ```
 curl http://localhost:80/api/v1/payments/08386b24-aa76-47a9-ac28-dd4f4efab8cd -H "X-API-Key: change-me-to-a-secure-key"
+```
+3) для получения списка таблиц в бд
+```
+docker exec -it $(docker compose ps -q postgres) psql -U postgres -d payments -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public';"
+```
+4) для получения содержимого таблицы outbox последние 50
+```
+docker exec -it $(docker compose ps -q postgres) psql -U postgres -d payments -c "SELECT * FROM outbox ORDER BY id DESC LIMIT 50;"
+```
+5) для получения содержимого таблицы payments последние 50
+```
+docker exec -it $(docker compose ps -q postgres) psql -U postgres -d payments -c "SELECT * FROM payments ORDER BY id DESC LIMIT 50;"
+```
+6) для получения содержимого таблицы миграций последние 50
+```
+docker exec -it $(docker compose ps -q postgres) psql -U postgres -d payments -c "SELECT * FROM alembic_version;"
 ```
 ## Стек
 - FastAPI + Pydantic v2
