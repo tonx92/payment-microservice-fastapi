@@ -23,7 +23,7 @@ class PaymentRead(BaseModel):
     amount: Decimal
     currency: Currency
     description: str
-    metadata_: dict | None = Field(default=None, alias="metadata")
+    metadata_: dict | None = Field(default=None, alias="metadata", validation_alias="metadata_")
     status: PaymentStatus
     idempotency_key: str
     webhook_url: str | None

@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 CONSUMER_WEBHOOK_TIMEOUT = float(os.getenv("CONSUMER_WEBHOOK_TIMEOUT", "10.0"))
 CONSUMER_WEBHOOK_MAX_RETRIES = int(os.getenv("CONSUMER_WEBHOOK_MAX_RETRIES", "3"))
-CONSUMER_WEBHOOK_RETRY_DELAY = float(os.getenv("CONSUMER_WEBHOOK_RETRY_DELAY", "1.0"))
+CONSUMER_WEBHOOK_RETRY_DELAY = float(os.getenv("CONSUMER_WEBHOOK_RETRY_DELAY", "5.0"))
 
 
 async def send_webhook(url: str, payload: dict) -> bool:
@@ -27,5 +27,5 @@ async def send_webhook(url: str, payload: dict) -> bool:
                 "webhook %s error %s attempt %d", url, e, attempt + 1
             )
         if attempt < CONSUMER_WEBHOOK_MAX_RETRIES - 1:
-            await asyncio.sleep(CONSUMER_WEBHOOK_RETRY_DELAY * (attempt + 1))
+            await asyncio.sleep(CONSUMER_WEBHOOK_RETRY_DELAY * (2 ** (attempt + 1)))
     return False

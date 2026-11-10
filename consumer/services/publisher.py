@@ -17,7 +17,7 @@ CONSUMER_PUBLISHER_POLL_INTERVAL = float(os.getenv("CONSUMER_PUBLISHER_POLL_INTE
 CONSUMER_PUBLISHER_BATCH_SIZE = int(os.getenv("CONSUMER_PUBLISHER_BATCH_SIZE", "50"))
 
 
-async def publish_outbox_events(channel: aio_pika.abc.AbstractChannel) -> None:
+async def publish_outbox_events(exchange: aio_pika.abc.AbstractExchange) -> None:
     async with async_session_factory() as session:
         result = await session.execute(
             select(Outbox).where(Outbox.published_at.is_(None)).limit(CONSUMER_PUBLISHER_BATCH_SIZE)
@@ -27,12 +27,11 @@ async def publish_outbox_events(channel: aio_pika.abc.AbstractChannel) -> None:
             return
 
         for event in events:
-            await channel.basic_publish(
+            await exchange.publish(
                 aio_pika.Message(
                     body=json.dumps(event.payload).encode(),
                     delivery_mode=aio_pika.DeliveryMode.PERSISTENT,
                 ),
-                exchange="payments",
                 routing_key="payments",
             )
             event.published_at = datetime.now(timezone.utc)
@@ -51,12 +50,12 @@ async def start_publisher(shutdown_event: asyncio.Event) -> None:
             await asyncio.sleep(5)
     logger.info("rabbitmq connected")
     channel = await connection.channel()
-    await channel.declare_exchange("payments", aio_pika.ExchangeType.DIRECT)
+    exchange = await channel.declare_exchange("payments", aio_pika.ExchangeType.DIRECT)
 
     try:
         while not shutdown_event.is_set():
             try:
-                await publish_outbox_events(channel)
+                await publish_outbox_events(exchange)
             except Exception:
                 logger.exception("outbox publish error")
             await asyncio.sleep(CONSUMER_PUBLISHER_POLL_INTERVAL)

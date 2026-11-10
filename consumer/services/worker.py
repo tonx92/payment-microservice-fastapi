@@ -41,7 +41,7 @@ async def setup_queues(connection: aio_pika.abc.AbstractConnection) -> None:
 
 async def process_payment(
     message: aio_pika.abc.AbstractIncomingMessage,
-    channel: aio_pika.abc.AbstractChannel,
+    exchange: aio_pika.abc.AbstractExchange,
 ) -> None:
     body = json.loads(message.body)
     payment_id = uuid.UUID(body["payment_id"])
@@ -68,7 +68,10 @@ async def process_payment(
                     "amount": str(payment.amount),
                     "currency": payment.currency.value,
                 }
-                await send_webhook(payment.webhook_url, payload)
+                delivered = await send_webhook(payment.webhook_url, payload)
+                if not delivered:
+                    await message.nack(requeue=False)
+                    return
             await message.ack()
         else:
             if attempts >= CONSUMER_WORKER_MAX_ATTEMPTS:
@@ -80,9 +83,8 @@ async def process_payment(
                 await session.rollback()
                 await asyncio.sleep(3 ** (attempts + 1))
                 new_body = json.dumps({**body, "attempts": attempts + 1})
-                await channel.basic_publish(
+                await exchange.publish(
                     aio_pika.Message(body=new_body.encode()),
-                    exchange=EXCHANGE_NAME,
                     routing_key=QUEUE_NAME,
                 )
                 await message.ack()
@@ -101,6 +103,7 @@ async def start_worker(shutdown_event: asyncio.Event) -> None:
     channel = await connection.channel()
     await channel.set_qos(prefetch_count=10)
     queue = await channel.get_queue(QUEUE_NAME)
+    exchange = await channel.get_exchange(EXCHANGE_NAME)
 
     try:
         while not shutdown_event.is_set():
@@ -110,7 +113,7 @@ async def start_worker(shutdown_event: asyncio.Event) -> None:
                 await asyncio.sleep(1)
                 continue
             try:
-                await process_payment(message, channel)
+                await process_payment(message, exchange)
             except Exception:
                 logger.exception("unhandled error processing message")
                 await message.nack(requeue=False)

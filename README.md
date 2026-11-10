@@ -27,7 +27,15 @@ docker exec -it $(docker compose ps -q postgres) psql -U postgres -d payments -c
 ```
 4) для получения содержимого таблицы миграций последние 50
 ```
-docker exec -it $(docker compose ps -q postgres) psql -U postgres -d payments -c "SELECT * FROM outbox ORDER BY id DESC LIMIT 50;"
+docker exec -it $(docker compose ps -q postgres) psql -U postgres -d payments -c "SELECT * FROM alembic_version;"
+```
+5) создание платежа POST /api/v1/payments
+```
+curl -X POST http://localhost:80/api/v1/payments -H "X-API-Key: change-me-to-a-secure-key" -H "Idempotency-Key: 550e8400-e29b-41d4-a716-446655440002" -H "Content-Type: application/json" -d "{\"amount\": 100.50, \"currency\": \"RUB\", \"description\": \"Test payment\", \"webhook_url\": \"http://localhost:8025/webhook\", \"metadata\": {\"order_id\": \"12345\", \"source\": \"test\"}}"
+```
+6) получение платежа GET /api/v1/payments/{payment_id}
+```
+curl http://localhost:80/api/v1/payments/08386b24-aa76-47a9-ac28-dd4f4efab8cd -H "X-API-Key: change-me-to-a-secure-key"
 ```
 ## Стек
 - FastAPI + Pydantic v2

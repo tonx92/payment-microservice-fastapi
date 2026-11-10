@@ -31,7 +31,7 @@ class Payment(Base):
         "metadata", JSONB, nullable=True
     )
     status: Mapped[PaymentStatus] = mapped_column(
-        Enum(PaymentStatus, name="payment_status", native_enum=False),
+        Enum(PaymentStatus, name="payment_status", native_enum=False, values_callable=lambda x: [e.value for e in x]),
         nullable=False,
     )
     idempotency_key: Mapped[str] = mapped_column(
