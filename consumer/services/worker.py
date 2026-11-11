@@ -7,7 +7,7 @@ import uuid
 from datetime import datetime, timezone
 
 import aio_pika
-from sqlalchemy import select
+from sqlalchemy import delete, select
 
 from consumer.database import async_session_factory
 from consumer.models.outbox import Outbox
@@ -40,19 +40,8 @@ async def setup_queues(connection: aio_pika.abc.AbstractConnection) -> None:
     await dlq.bind(DLX_NAME, DLQ_NAME)
 
 
-async def _has_notified_event(session, payment_id: uuid.UUID) -> bool:
-    result = await session.execute(
-        select(Outbox.id).where(
-            Outbox.event_type == "payment.notified",
-            Outbox.payment_id == payment_id,
-        ).limit(1)
-    )
-    return result.scalar_one_or_none() is not None
-
-
-async def _send_webhook_and_notify(
+async def _send_webhook(
     payment: Payment,
-    session,
     message: aio_pika.abc.AbstractIncomingMessage,
 ) -> None:
     if not payment.webhook_url:
@@ -67,12 +56,6 @@ async def _send_webhook_and_notify(
     }
     delivered = await send_webhook(payment.webhook_url, payload)
     if delivered:
-        notified_event = Outbox(
-            payment_id=payment.id,
-            event_type="payment.notified",
-        )
-        session.add(notified_event)
-        await session.commit()
         await message.ack()
     else:
         await message.nack(requeue=False)
@@ -90,34 +73,29 @@ async def process_payment(
             await message.nack(requeue=False)
             return
 
-        if payment.status in (PaymentStatus.SUCCEEDED, PaymentStatus.FAILED):
-            notified = await _has_notified_event(session, payment.id)
-            if not notified:
-                await _send_webhook_and_notify(payment, session, message)
+        if payment.status not in (PaymentStatus.SUCCEEDED, PaymentStatus.FAILED):
+            await asyncio.sleep(random.uniform(2.0, 5.0))
+            success = random.random() < 0.9
+
+            if success:
+                payment.status = PaymentStatus.SUCCEEDED
             else:
-                await message.ack()
-            return
+                payment.status = PaymentStatus.FAILED
 
-        await asyncio.sleep(random.uniform(2.0, 5.0))
-        success = random.random() < 0.9
+            payment.processed_at = datetime.now(timezone.utc)
 
-        if success:
-            payment.status = PaymentStatus.SUCCEEDED
-            event_type = "payment.success"
+            await session.execute(
+                delete(Outbox).where(
+                    Outbox.payment_id == payment.id,
+                    Outbox.event_type == "payment.created",
+                )
+            )
+            await session.commit()
+
+        if payment.status == PaymentStatus.SUCCEEDED:
+            await _send_webhook(payment, message)
         else:
-            payment.status = PaymentStatus.FAILED
-            event_type = "payment.failed"
-
-        payment.processed_at = datetime.now(timezone.utc)
-
-        outbox_event = Outbox(
-            payment_id=payment.id,
-            event_type=event_type,
-        )
-        session.add(outbox_event)
-        await session.commit()
-
-        await _send_webhook_and_notify(payment, session, message)
+            await message.ack()
 
 
 async def start_worker(shutdown_event: asyncio.Event) -> None:

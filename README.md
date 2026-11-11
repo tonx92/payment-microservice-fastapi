@@ -10,18 +10,37 @@
 
 4. Откройте Веб интерфейс rabbitmq
 http://localhost:15672/
+5. (Опционально) Для удобство можно воспользоваться OpenAPI.json 
 
 
-## 
+
 ## Команды для тестирования
 
 1) создание платежа POST /api/v1/payments
 
         curl -X POST http://localhost:80/api/v1/payments -H "X-API-Key: change-me-to-a-secure-key" -H "Idempotency-Key: 550e8400-e29b-41d4-a716-446655440003" -H "Content-Type: application/json" -d "{\"amount\": 100.50, \"currency\": \"RUB\", \"description\": \"Test payment\", \"webhook_url\": \"http://localhost:8025/webhook\", \"metadata\": {\"order_id\": \"12345\", \"source\": \"test\"}}"
 
+    Headers:
+    - `X-API-Key` — API-ключ для аутентификации
+    - `Idempotency-Key` — уникальный ключ идемпотентности (max 128 символов)
+    - `Content-Type` — application/json
+
+    Body:
+    - `amount` — сумма платежа (обязательный, > 0)
+    - `currency` — код валюты (по умолчанию: RUB)
+    - `description` — описание платежа (опционально, max 500 символов)
+    - `metadata` — дополнительные метаданные (опционально, dict)
+    - `webhook_url` — URL для webhook-уведомления (опционально, max 1024 символов)
+
 2) получение платежа GET /api/v1/payments/{payment_id}
 
         curl http://localhost:80/api/v1/payments/c86a3621-637c-45e5-a418-204ad0b49632 -H "X-API-Key: change-me-to-a-secure-key"
+
+    Path:
+    - `payment_id` — UUID платежа (обязательный)
+
+    Headers:
+    - `X-API-Key` — API-ключ для аутентификации
 
 3) для получения списка таблиц в бд
 
