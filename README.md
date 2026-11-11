@@ -2,18 +2,18 @@
 Микросервис безопасной обработки платежей на FastApi с реализацией outbox
 
 ## Быстрый старт
-1. Клонируйте рпозиторий
+1. Клонируйте репозиторий
 
         git clone git@github.com:tonx92/payment-microservice-fastapi.git
 
 2. Скопируйте файл .env.example и назовите .env (Опционально: измените параметры по умолчанию)
-2. Запустите проект:
+3. Запустите проект:
 
         docker compose -f 'docker-compose.yml' up -d
 
-4. Откройте Веб интерфейс rabbitmq что бы отслеживать состояние очередей
+4. Откройте веб-интерфейс rabbitmq чтобы отслеживать состояние очередей
 http://localhost:15672/
-5. (Опционально) Для удобство можно воспользоваться OpenAPI.json 
+5. (Опционально) Для удобства можно воспользоваться OpenAPI.json
 
 
 
@@ -45,7 +45,7 @@ http://localhost:15672/
     Headers:
     - `X-API-Key` — API-ключ для аутентификации
 
-3) для получения списка таблиц в бд
+3) для получения списка таблиц в БД
 
         docker compose exec postgres psql -U postgres -d payments -P pager=off -c "SELECT tablename FROM pg_tables WHERE schemaname = 'public';"
 
