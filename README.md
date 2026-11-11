@@ -3,12 +3,15 @@
 
 ## Быстрый старт
 1. Клонируйте рпозиторий
+
+        git clone git@github.com:tonx92/payment-microservice-fastapi.git
+
 2. Скопируйте файл .env.example и назовите .env (Опционально: измените параметры по умолчанию)
 2. Запустите проект:
 
         docker compose -f 'docker-compose.yml' up -d
 
-4. Откройте Веб интерфейс rabbitmq
+4. Откройте Веб интерфейс rabbitmq что бы отслеживать состояние очередей
 http://localhost:15672/
 5. (Опционально) Для удобство можно воспользоваться OpenAPI.json 
 
